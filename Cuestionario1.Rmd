@@ -1,0 +1,157 @@
+---
+title: "Cuestionario 1"
+author: "Vero"
+date: "11/9/2020"
+output: html_document
+---
+
+
+Este ejercicio tiene como objetivo repasar los conceptos que vimos en clase y recordarles como usar `r` para ello. Si bien tienen las preguntas aquí, deben enviar sus respuestas en Moodle. 
+
+
+## Encontrando el auto deseado
+
+Un fanático de la econometría quiere comprar un auto Honda Pilot usado. El cree que el precio de estas camionetas está determinado solamente por dos variables: `los años de uso` de la misma y por el `kilometraje`. 
+
+
+Para eso, compró El Mercurio (diario chileno) y extrajo los siguientes datos de los 10 automóviles de esa marca que aparecen a la venta el pasado domingo y estima una regresión donde el precio de los automóviles HP se explica por una constante, por los kilómetros recorridos y los años de uso.
+
+## Comencemos...
+
+### Carguemos packages a la memoria
+
+Exploraremos los datos con `dplyr` y los visualizaremos con `ggplot2` 
+
+
+```{r load-packages, message=FALSE}
+library(dplyr)
+library(ggplot2)
+
+```
+
+Los datos:
+
+```{r datos, message=FALSE}
+
+honda<- read.csv("Honda.csv", sep=";")
+str(honda)
+
+```
+
+variable         | descripcion
+---------------- | -----------
+`precio`          | Precio en millones de pesos chilenos de un auto honda usado publicado para la venta
+`km`              | miles de kilometros recorridos por el automovil publicado
+`edad`         | años de uso del automóvil.
+
+## Explorando los datos
+
+```{r mirar_datos}
+
+summary(honda)
+```
+
+```{r gráficos}
+ggplot(data = honda, aes(x = edad, y = precio)) +
+  geom_point()
+ggplot(data = honda, aes(x = km, y = precio)) +
+  geom_point()
+```
+
+Mirando los gráficos anteriores podemos ver una relación entre las variables. ¿Tiene sentido el signo de la relación? 
+Sería interesante desde ya ver la correlación entre las 2 variables que estamos pensando como explicativas del precio porque si hay mucha correlación entre ellas, esto puede afectar el error estándar de los coeficientes estimados. 
+
+```{r correlación}
+# la función cor calcula la correlación
+cor(honda$km,honda$edad)
+
+```
+
+## La regresión estimada con ambas variables
+
+```{r regresiones}
+reg1 <- lm(precio ~ km + edad, data = honda)
+summary(reg1)
+
+```
+
+1. ¿Cuál de las siguientes afirmaciones es **falsa**? 
+<ol>
+<li> Esperamos que en promedio un año más de vida del auto, genere una caída de 1.83 millones de pesos si todo lo demás está constante.  </li>
+<li> Esperaríamos que en promedio, por cada mil kilómetros adicionales, el precio caiga en 29380  pesos (0.029 millones de pesos) si todo lo demás está constante.</li> 
+<li> Esperamos que en promedio, por cada mil kilómetros adicionales, el precio caiga 2,938% si todo lo demás está constante.</li>  
+<li> La variable edad es significativamente distinta de cero</li>
+</ol>
+
+2. ¿Cuál de las siguientes afirmaciones es **falsa**? 
+<ol>
+<li> Al hacer regresiones simples, en vez de una múltiple los coeficientes cambian y también la significancia estadística de las variables. </li>
+<li> Aunque la variable km no es significativamente distinta de cero en la regresión múltiple, aporta al modelo porque el R2 corregido aumenta al incorporarla. </li>
+<li>Al hacer regresiones simples, en vez de una múltiple los coeficientes cambian, pero los test t se mantienen inalterados. </li>
+<li> Las variables explicativas tienen correlación entre ellas, esto podría explicar la diferencia entre las tres regresiones aunque sería mejor tener una muestra mayor </li>
+</ol>
+
+## Entendiendo el residuo, su relación con el precio estimado (fitted) y el real.
+
+Primero pidamos a r que agregue a nuestros datos, las variables que genera automáticamemente al correr una regresión (resid y fitted)
+El valor fitted corresponde al valor estimado por la regresión. 
+
+\[
+  \hat{y} = `r reg1$coefficients[1]`  `r reg1$coefficients[2]` \times km  `r reg1$coefficients[3]` \times años
+\]
+
+\[
+  e_i = y_i - \hat{y}_i
+\]
+
+```{r genera_residuo_fit}
+honda$residuo<-reg1$residuals #crea la variable residuo en el data frame honda y le asigna los residuos de la regresión. 
+
+honda$fit<-reg1$fitted.values   #crea la variable fit y le asigna el valor estimado del precio en función de los valores de las variables explicativas.
+
+honda$residuo[1] #extrae el primer valor de la variable residuo
+which.min(honda$residuo)  #indica la posición del residuo más pequeño.
+```
+3. Utilice los resultados del chunk "genera_residuo_fit" para responder las preguntas que siguen:
+
+ <ol>
+<li> Si el auto que él quiere comprar corresponde a la segunda observación de la muestra, ¿debiera tratar de conseguir un descuento? </li>
+<li> Cual es el valor del segundo residuo </li>
+<li>¿Cuál auto debiera comprar si no quiere gastar más de 14 millones? </li>
+</ol>
+
+## Transformando los datos y su efecto en los coeficientes estimados.
+
+En los datos originales, el precio está en millones de pesos y los kilometros en miles. ¿Cuáles serían los parámetros estimados si los datos del precio no se usan en millones sino en pesos? ¿Cuáles serían los parámetros estimados si los datos del kilometraje no se usan en miles de kilómetros sino en kilómetros recorridos?
+
+Transformemos los datos: 
+```{r transfora datos}
+honda$precio_pesos<-honda$precio*1000000
+honda$km_uni<-honda$km*1000
+
+```
+
+Luego podemos re-hacer las regresiones usando estas nuevas variables. Cambie los nombres de las variables en el chunk que sigue y compare los resultados
+```{r reg_transf}
+reg4<-lm(precio~km+edad,data=honda)
+reg5<-lm(precio~km+edad,data=honda)
+intercepto<-c(reg1$coefficients[1],reg4$coefficients[1],reg5$coefficients[1])
+beta2<-c(reg1$coefficients[2],reg4$coefficients[2],reg5$coefficients[2])
+beta3<-c(reg1$coefficients[3],reg4$coefficients[3],reg5$coefficients[3])
+r2<-c(summary(reg1)$r.squared,summary(reg4)$r.squared,summary(reg5)$r.squared)
+resultados <- rbind(intercepto, beta2,beta3,r2)
+colnames(resultados)<-c("reg1","reg4","reg5")
+resultados
+
+```
+
+4. Utilice los resultados del chunk "reg_transf" para responder las preguntas que siguen:
+
+ <ol>
+<li> ¿Los coeficientes cambian reflejando el cambio en la unidad de medida de las variables? </li>
+ <li> ¿El R2 cambia reflejando el cambio en la unidad de medida de las variables?</li>
+ </ol>
+
+**No olviden completar las respuestas en Moodle**
+
+
