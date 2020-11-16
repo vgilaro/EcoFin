@@ -1,0 +1,92 @@
+---
+title: "Simulación VPN"
+author: "Vero"
+date: "11/16/2020"
+output: html_document
+---
+
+## Características del proyecto
+
+Calculemos el VPN de una inversión. 
+
+
+```{r valores iniciales}
+Io<--1400
+g<-0.05
+i<-0.1
+duracion<-10
+n<-c(1:duracion)
+I1<-200
+```
+
+En este ejemplo tengo `r duracion` flujos que crecen a una tasa `r g*100`% respecto al flujo del año 1 que es `r I1`. La tasa de costo de capital es `r i*100`%. La inversión inicial es `r Io`
+
+### Cálculo VPN
+
+```{r VPN}
+d<-1/(1+i)^n
+I<-I1*(1+g)^(n-1)
+VPN<-sum(I*d)+Io
+VPN
+```
+En este caso **el VPN es `r VPN`** por tanto me conviene realizar la inversión según este criterio. 
+Hasta ahora en clase solamente pensamos en que la tasa de costo de capital fuera diferente y por eso hacemos el gráfico y calculamos la Tir. 
+
+## Supongamos que g es aleatorio 
+
+ Podemos modelar el comportamiento de g, suponiendo que proviene de una distribución normal, con media en `r g*100`%, pero con una desviación estándard. 
+ 
+```{r g_aleatorio}
+s<-0.02
+
+ga<-g+rnorm(max(n),mean=0,sd=1)*s
+
+ga
+
+Ia<-I1*(1+ga)^(n-1)
+
+VPN<-sum(Ia*d)+Io
+VPN
+```
+
+
+Para esta simulación con desviación estándar de `r s*100`%, el valor del VPN calculado es `r VPN`. 
+Este proceso lo podemos repetir muchas veces!!! 
+
+# Simulación Montecarlo
+
+```{r simulaciónG}
+simulaciones<-1000
+G<-matrix(g+rnorm(simulaciones*duracion,mean=0,sd=1)*s,nrow=duracion,ncol=simulaciones)
+```
+
+En este caso G es una matriz, de dimensión `r dim(G)`, con media `r mean(G)`. El valor máximo de G es `r max(G)`, el mínimo es `r min(G)`. Podemos ver en un histograma, que si bien los valores se concentran en torno a `r g` ahora tienen una distribución que depende de la desviación estándar seleccionada. 
+
+```{r histograma_G}
+hist(G)
+```
+Con estos valores de tasas de crecimiento, podemos calcular nuevamente los flujos, descontarlos para cada simulación a la tcc y valcular el VPN. Tendremos `r simulaciones` valores de VPN y por tanto también podemos estudiar la distribución de valores de VPN. 
+
+```{r VPNS}
+flujos<-I1*(1+G)^(n-1)
+flujosd<-flujos*d
+
+
+suma_flujos_des<-apply(flujosd,2,sum)
+head(suma_flujos_des)
+VPNS<-suma_flujos_des+Io
+```
+
+Lo más interesante es calcular que porcentaje de estos VPN simulados son positivos y cuáles negativos, para tener una idea de cuánto afecta nuestra decisión de hacer el proyecto. 
+
+```{r simulación}
+plot(VPNS)
+hist(VPNS)
+c<-ifelse(VPNS<0,1,0)
+sum(c)
+negativos<-sum(c)/simulaciones
+
+```
+
+El `r negativos*100`% de los VPN simulados serían negativos si se dieran nuestros supuestos sobre los flujos. 
+
